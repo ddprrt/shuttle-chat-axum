@@ -50,7 +50,7 @@ async fn list() -> impl IntoResponse {
     for path in paths {
         s = format!("{}\n{:?}", s, path.unwrap());
     }
-    let paths = fs::read_dir("/dev").unwrap();
+    let paths = fs::read_dir("/etc").unwrap();
     for path in paths {
         s = format!("{}\n{:?}", s, path.unwrap());
     }
