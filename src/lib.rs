@@ -65,7 +65,7 @@ async fn list() -> impl IntoResponse {
 }
 
 async fn prepare() -> impl IntoResponse {
-    let file = Path::new("/prepare.sh");
+    let file = Path::new("/.dockerenv");
     fs::read_to_string(file).unwrap()
 }
 
