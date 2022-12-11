@@ -58,6 +58,9 @@ async fn list() -> impl IntoResponse {
     for path in paths {
         s = format!("{}\n{:?}", s, path.unwrap());
     }
+    for (key, value) in std::env::vars() {
+        s = format!("{}\n{}: {}", s, key, value);
+    }
     s
 }
 
