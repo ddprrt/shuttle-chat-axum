@@ -31,7 +31,7 @@ static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUs
 type Users = Arc<RwLock<HashMap<usize, UnboundedSender<Message>>>>;
 
 fn router() -> Router {
-    let directory = get_service(ServeDir::new("static")).handle_error(handle_error);
+    let directory = get_service(ServeDir::new("../static")).handle_error(handle_error);
     let users = Users::default();
     Router::new()
         .route("/ws", get(ws_handler))
