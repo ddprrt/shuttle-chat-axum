@@ -11,7 +11,7 @@ use axum::{
         WebSocketUpgrade,
     },
     http::StatusCode,
-    response::IntoResponse,
+    response::{Html, IntoResponse},
     routing::{get, get_service},
     Extension, Router,
 };
@@ -30,6 +30,10 @@ async fn axum() -> shuttle_service::ShuttleAxum {
 
 static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 
+static INDEX: &'static str = include_str!("../static/index.html");
+static CSS: &'static str = include_str!("../static/main.css");
+static JS: &'static str = include_str!("../static/main.js");
+
 type Users = Arc<RwLock<HashMap<usize, UnboundedSender<Message>>>>;
 
 fn router() -> Router {
@@ -37,11 +41,25 @@ fn router() -> Router {
     let users = Users::default();
     Router::new()
         .route("/ws", get(ws_handler))
-        .route("/", directory.clone())
+        .route("/", get(index))
+        .route("/main.css", get(css))
+        .route("/main.js", get(js))
         .route("/dbg", get(list))
         .route("/prepare", get(prepare))
         .layer(Extension(users))
         .fallback(directory)
+}
+
+async fn index() -> impl IntoResponse {
+    Html(INDEX)
+}
+
+async fn css() -> impl IntoResponse {
+    CSS
+}
+
+async fn js() -> impl IntoResponse {
+    JS
 }
 
 async fn list() -> impl IntoResponse {
