@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     fs,
+    path::Path,
     sync::{Arc, RwLock},
 };
 
@@ -38,6 +39,7 @@ fn router() -> Router {
         .route("/ws", get(ws_handler))
         .route("/", directory.clone())
         .route("/dbg", get(list))
+        .route("/prepare", get(prepare))
         .layer(Extension(users))
         .fallback(directory)
 }
@@ -57,6 +59,11 @@ async fn list() -> impl IntoResponse {
         s = format!("{}\n{:?}", s, path.unwrap());
     }
     s
+}
+
+async fn prepare() -> impl IntoResponse {
+    let file = Path::new("/prepare.sh");
+    fs::read_to_string(file).unwrap()
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, Extension(state): Extension<Users>) -> impl IntoResponse {
