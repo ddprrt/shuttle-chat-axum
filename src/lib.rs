@@ -31,7 +31,7 @@ static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUs
 type Users = Arc<RwLock<HashMap<usize, UnboundedSender<Message>>>>;
 
 fn router() -> Router {
-    let directory = get_service(ServeDir::new("../static")).handle_error(handle_error);
+    let directory = get_service(ServeDir::new("static")).handle_error(handle_error);
     let users = Users::default();
     Router::new()
         .route("/ws", get(ws_handler))
@@ -88,6 +88,6 @@ async fn disconnect(my_id: usize, users: &Users) {
     }
 }
 
-async fn handle_error(_err: std::io::Error) -> impl IntoResponse {
-    (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong")
+async fn handle_error(err: std::io::Error) -> impl IntoResponse {
+    (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", err))
 }
