@@ -43,7 +43,12 @@ fn router() -> Router {
 }
 
 async fn list() -> impl IntoResponse {
-    let paths = fs::read_dir("./home").unwrap();
+    let paths = fs::read_dir(".").unwrap();
+    let mut s = "".to_string();
+    for path in paths {
+        s = format!("{}\n{:?}", s, path.unwrap());
+    }
+    let paths = fs::read_dir("/").unwrap();
     let mut s = "".to_string();
     for path in paths {
         s = format!("{}\n{:?}", s, path.unwrap());
