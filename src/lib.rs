@@ -45,7 +45,7 @@ fn router() -> Router {
         .route("/dbg", get(list))
         .route("/disconnect/:user_id", get(disconnect_user))
         .route("/prepare", get(prepare))
-        .route("/prepare", get(num_cpu))
+        .route("/num", get(num_cpu))
         .layer(Extension(users))
         .fallback(directory)
 }
