@@ -10,8 +10,9 @@ publish = false
 shuttle-service = { version = "0.7.2", features = ["web-axum"] }
 axum = { version = "0.5", features = ["ws"] }
 sync_wrapper = "0.1.1"
-tower-http = { version = "0.3.5", features = ["fs"] }
+tower-http = { version = "0.3.5", features = ["fs", "auth"] }
 tokio = { version = "1.20.1" }
 futures = "0.3.25"
 tokio-stream = "0.1.11"
 num_cpus = "1.14.0"
+shuttle-secrets = "0.7.2"

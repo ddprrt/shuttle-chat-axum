@@ -11,16 +11,20 @@ use axum::{
     Extension, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use shuttle_secrets::SecretStore;
 use sync_wrapper::SyncWrapper;
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver, UnboundedSender},
     RwLock,
 };
-use tower_http::services::ServeDir;
+use tower_http::{auth::RequireAuthorizationLayer, services::ServeDir};
 
 #[shuttle_service::main]
-async fn axum() -> shuttle_service::ShuttleAxum {
-    let router = router();
+async fn axum(
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
+) -> shuttle_service::ShuttleAxum {
+    let secret = secret_store.get("BEARER").unwrap();
+    let router = router(secret);
     let sync_wrapper = SyncWrapper::new(router);
 
     Ok(sync_wrapper)
@@ -34,18 +38,22 @@ static JS: &'static str = include_str!("../static/main.js");
 
 type Users = Arc<RwLock<HashMap<usize, UnboundedSender<Message>>>>;
 
-fn router() -> Router {
+fn router(secret: String) -> Router {
     let directory = get_service(ServeDir::new("static")).handle_error(handle_error);
     let users = Users::default();
+    let admin = Router::new()
+        .route("/disconnect/:user_id", get(disconnect_user))
+        .layer(RequireAuthorizationLayer::bearer(&secret));
+
     Router::new()
         .route("/ws", get(ws_handler))
         .route("/", get(index))
         .route("/main.css", get(css))
         .route("/main.js", get(js))
         .route("/dbg", get(list))
-        .route("/disconnect/:user_id", get(disconnect_user))
         .route("/prepare", get(prepare))
         .route("/num", get(num_cpu))
+        .nest("/admin", admin)
         .layer(Extension(users))
         .fallback(directory)
 }
@@ -97,6 +105,7 @@ async fn ws_handler(ws: WebSocketUpgrade, Extension(state): Extension<Users>) ->
 
 async fn handle_socket(ws: WebSocket, state: Users) {
     println!("Hello {:?}", state);
+
     let my_id = NEXT_USERID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let (mut sender, mut receiver) = ws.split();
 
@@ -107,6 +116,7 @@ async fn handle_socket(ws: WebSocket, state: Users) {
         while let Some(msg) = rx.recv().await {
             sender.send(msg).await.expect("Error!");
         }
+        sender.close().await.unwrap();
     });
 
     state.write().await.insert(my_id, tx);
