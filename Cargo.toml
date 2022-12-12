@@ -7,12 +7,15 @@ publish = false
 [lib]
 
 [dependencies]
-shuttle-service = { version = "0.7.2", features = ["web-axum"] }
-axum = { version = "0.5", features = ["ws"] }
+shuttle-service = { version = "0.8", features = ["web-axum"] }
+axum = { version = "0.6", features = ["ws"] }
 sync_wrapper = "0.1.1"
 tower-http = { version = "0.3.5", features = ["fs", "auth"] }
-tokio = { version = "1.20.1" }
+tokio = { version = "1.22.0" }
 futures = "0.3.25"
 tokio-stream = "0.1.11"
 num_cpus = "1.14.0"
-shuttle-secrets = "0.7.2"
+shuttle-secrets = "0.8"
+shuttle-static-folder = "0.8.0"
+serde_json = "1.0.89"
+serde = "1.0.150"

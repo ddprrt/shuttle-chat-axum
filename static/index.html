@@ -9,21 +9,70 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
         Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      background-color: #333;
+      color: white;
     }
 
     h1 {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
         Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
     }
+
+    .chat {
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 2rem;
+    }
+
+    #log {
+      overflow: scroll;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .inp {
+      display: flex;
+    }
+
+    .nom {
+      font-weight: bold;
+    }
+
+    .bubble {
+      line-height: 1.2;
+    }
+
+    #input {
+      flex-grow: 1;
+      appearance: none;
+      background-color: #555;
+      border: none;
+      border-radius: 10px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      font-size: 16px;
+      color: white;
+      padding: 10px;
+    }
+
+    #btn {}
   </style>
   <title>Shuttle</title>
 </head>
 
 <body>
-  <h1>Hello all!</h1>
-  <input id="input" type="text" />
-  <button id="btn">Send</button>
-  <pre id="log"></pre>
+  <div class="chat">
+    <h1>!Discord</h1>
+    <div id="log"></div>
+    <div class="inp">
+      <input id="input" type="text" /><button id="btn">Send</button>
+    </div>
+  </div>
   <script src="/main.js"></script>
 </body>
 

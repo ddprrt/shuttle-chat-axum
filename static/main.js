@@ -1,5 +1,7 @@
 let log = console.log;
 
+let nome = prompt("Enter your name");
+
 const wsUri = ((window.location.protocol == "https:" && "wss://") || "ws://") +
   window.location.host +
   "/ws";
@@ -13,8 +15,9 @@ conn.onopen = function () {
 
 conn.onmessage = function (e) {
   log("Received: " + e.data);
-  document.getElementById("log").textContent =
-    document.getElementById("log").textContent + "\n" + e.data;
+  let msg = JSON.parse(e.data);
+  //let str = `${msg.name} (${msg.uid}): ${msg.message}`;
+  document.getElementById("log").appendChild(createMsg(msg));
 };
 
 conn.onclose = function () {
@@ -22,8 +25,28 @@ conn.onclose = function () {
   conn = null;
 };
 
+function createMsg(message) {
+  const msg = document.createElement("div");
+  msg.textContent = message.message;
+  msg.classList.add("msg");
+  const name = document.createElement("div");
+  name.textContent = `${message.name} (${message.uid})`;
+  name.classList.add("nom");
+  const s = document.createElement("div");
+  s.appendChild(name);
+  s.appendChild(msg);
+  s.classList.add("bubble");
+  return s;
+}
+
 function send() {
-  conn.send(document.getElementById("input").value);
+  conn.send(
+    JSON.stringify({
+      name: nome,
+      message: document.getElementById("input").value,
+    }),
+  );
+  document.getElementById("input").value = "";
 }
 
 document.getElementById("btn")?.addEventListener("click", send);
@@ -32,6 +55,5 @@ document.getElementById("input")?.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
     send();
-    document.getElementById("input").value = "";
   }
 });

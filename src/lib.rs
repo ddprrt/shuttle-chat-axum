@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, sync::Arc};
+use std::{collections::HashMap, fs, path::PathBuf, sync::Arc};
 
 use axum::{
     extract::{
@@ -6,11 +6,12 @@ use axum::{
         Path, WebSocketUpgrade,
     },
     http::StatusCode,
-    response::{Html, IntoResponse},
+    response::IntoResponse,
     routing::{get, get_service},
     Extension, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use serde::{Deserialize, Serialize};
 use shuttle_secrets::SecretStore;
 use sync_wrapper::SyncWrapper;
 use tokio::sync::{
@@ -22,9 +23,10 @@ use tower_http::{auth::RequireAuthorizationLayer, services::ServeDir};
 #[shuttle_service::main]
 async fn axum(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
+    #[shuttle_static_folder::StaticFolder] static_folder: PathBuf,
 ) -> shuttle_service::ShuttleAxum {
-    let secret = secret_store.get("BEARER").unwrap();
-    let router = router(secret);
+    let secret = secret_store.get("BEARER").unwrap_or("Bear".to_string());
+    let router = router(secret, static_folder);
     let sync_wrapper = SyncWrapper::new(router);
 
     Ok(sync_wrapper)
@@ -32,14 +34,17 @@ async fn axum(
 
 static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 
-static INDEX: &'static str = include_str!("../static/index.html");
-static CSS: &'static str = include_str!("../static/main.css");
-static JS: &'static str = include_str!("../static/main.js");
-
 type Users = Arc<RwLock<HashMap<usize, UnboundedSender<Message>>>>;
 
-fn router(secret: String) -> Router {
-    let directory = get_service(ServeDir::new("static")).handle_error(handle_error);
+#[derive(Serialize, Deserialize)]
+struct Msg {
+    name: String,
+    uid: Option<usize>,
+    message: String,
+}
+
+fn router(secret: String, static_folder: PathBuf) -> Router {
+    let directory = get_service(ServeDir::new(static_folder)).handle_error(handle_error);
     let users = Users::default();
     let admin = Router::new()
         .route("/disconnect/:user_id", get(disconnect_user))
@@ -47,27 +52,12 @@ fn router(secret: String) -> Router {
 
     Router::new()
         .route("/ws", get(ws_handler))
-        .route("/", get(index))
-        .route("/main.css", get(css))
-        .route("/main.js", get(js))
         .route("/dbg", get(list))
         .route("/prepare", get(prepare))
         .route("/num", get(num_cpu))
         .nest("/admin", admin)
         .layer(Extension(users))
-        .fallback(directory)
-}
-
-async fn index() -> impl IntoResponse {
-    Html(INDEX)
-}
-
-async fn css() -> impl IntoResponse {
-    CSS
-}
-
-async fn js() -> impl IntoResponse {
-    JS
+        .fallback_service(directory)
 }
 
 async fn list() -> impl IntoResponse {
@@ -123,10 +113,24 @@ async fn handle_socket(ws: WebSocket, state: Users) {
 
     while let Some(Ok(result)) = receiver.next().await {
         println!("{:?}", result);
-        broadcast_msg(result, &state).await;
+        if let Ok(result) = enrich_result(result, my_id) {
+            broadcast_msg(result, &state).await;
+        }
     }
 
     disconnect(my_id, &state).await;
+}
+
+fn enrich_result(result: Message, id: usize) -> Result<Message, serde_json::Error> {
+    match result {
+        Message::Text(msg) => {
+            let mut msg: Msg = serde_json::from_str(&msg)?;
+            msg.uid = Some(id);
+            let msg = serde_json::to_string(&msg)?;
+            Ok(Message::Text(msg))
+        }
+        _ => Ok(result),
+    }
 }
 
 async fn broadcast_msg(msg: Message, users: &Users) {
