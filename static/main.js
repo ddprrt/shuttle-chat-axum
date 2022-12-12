@@ -1,7 +1,6 @@
 let log = console.log;
 
-const wsUri =
-  ((window.location.protocol == "https:" && "wss://") || "ws://") +
+const wsUri = ((window.location.protocol == "https:" && "wss://") || "ws://") +
   window.location.host +
   "/ws";
 conn = new WebSocket(wsUri);
@@ -27,4 +26,12 @@ function send() {
   conn.send(document.getElementById("input").value);
 }
 
-document.getElementById("btn").addEventListener("click", send);
+document.getElementById("btn")?.addEventListener("click", send);
+
+document.getElementById("input")?.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    send();
+    document.getElementById("input").value = "";
+  }
+});

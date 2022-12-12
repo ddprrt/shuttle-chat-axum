@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs,
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, fs, path::Path, sync::Arc};
 
 use axum::{
     extract::{
@@ -17,7 +12,10 @@ use axum::{
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use sync_wrapper::SyncWrapper;
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::{
+    mpsc::{self, UnboundedReceiver, UnboundedSender},
+    RwLock,
+};
 use tower_http::services::ServeDir;
 
 #[shuttle_service::main]
@@ -83,7 +81,7 @@ async fn list() -> impl IntoResponse {
 }
 
 async fn prepare() -> impl IntoResponse {
-    let file = Path::new("/.dockerenv");
+    let file = Path::new("/prepare.sh");
     fs::read_to_string(file).unwrap()
 }
 
@@ -107,9 +105,7 @@ async fn handle_socket(ws: WebSocket, state: Users) {
         });
     }
 
-    if let Ok(mut state) = state.write() {
-        state.insert(my_id, tx);
-    }
+    state.write().await.insert(my_id, tx);
 
     while let Some(Ok(result)) = receiver.next().await {
         println!("{:?}", result);
@@ -120,19 +116,18 @@ async fn handle_socket(ws: WebSocket, state: Users) {
 }
 
 async fn broadcast_msg(msg: Message, users: &Users) {
-    if let Ok(state) = users.read() {
-        for (&_uid, tx) in state.iter() {
-            tx.send(msg.clone()).expect("Failed to send Message")
+    if let Message::Text(msg) = msg {
+        for (&_uid, tx) in users.read().await.iter() {
+            tx.send(Message::Text(msg.clone()))
+                .expect("Failed to send Message")
         }
     }
 }
 
 async fn disconnect(my_id: usize, users: &Users) {
     println!("Good bye user {}", my_id);
-
-    if let Ok(mut state) = users.write() {
-        state.remove(&my_id);
-    }
+    users.write().await.remove(&my_id);
+    println!("Disconnected {my_id}");
 }
 
 async fn handle_error(err: std::io::Error) -> impl IntoResponse {
