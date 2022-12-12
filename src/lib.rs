@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fs, path::Path, sync::Arc};
+use std::{collections::HashMap, fs, sync::Arc};
 
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        WebSocketUpgrade,
+        Path, WebSocketUpgrade,
     },
     http::StatusCode,
     response::{Html, IntoResponse},
@@ -43,7 +43,9 @@ fn router() -> Router {
         .route("/main.css", get(css))
         .route("/main.js", get(js))
         .route("/dbg", get(list))
+        .route("/disconnect/:user_id", get(disconnect_user))
         .route("/prepare", get(prepare))
+        .route("/prepare", get(num_cpu))
         .layer(Extension(users))
         .fallback(directory)
 }
@@ -81,8 +83,12 @@ async fn list() -> impl IntoResponse {
 }
 
 async fn prepare() -> impl IntoResponse {
-    let file = Path::new("/prepare.sh");
+    let file = std::path::Path::new("/prepare.sh");
     fs::read_to_string(file).unwrap()
+}
+
+async fn num_cpu() -> impl IntoResponse {
+    num_cpus::get().to_string()
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, Extension(state): Extension<Users>) -> impl IntoResponse {
@@ -97,13 +103,11 @@ async fn handle_socket(ws: WebSocket, state: Users) {
     let (tx, mut rx): (UnboundedSender<Message>, UnboundedReceiver<Message>) =
         mpsc::unbounded_channel();
 
-    {
-        tokio::spawn(async move {
-            while let Some(msg) = rx.recv().await {
-                sender.send(msg).await.expect("Error!");
-            }
-        });
-    }
+    tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            sender.send(msg).await.expect("Error!");
+        }
+    });
 
     state.write().await.insert(my_id, tx);
 
@@ -122,6 +126,14 @@ async fn broadcast_msg(msg: Message, users: &Users) {
                 .expect("Failed to send Message")
         }
     }
+}
+
+async fn disconnect_user(
+    Path(user_id): Path<usize>,
+    Extension(users): Extension<Users>,
+) -> impl IntoResponse {
+    disconnect(user_id, &users).await;
+    "Done"
 }
 
 async fn disconnect(my_id: usize, users: &Users) {
