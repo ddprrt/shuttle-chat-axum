@@ -52,41 +52,9 @@ fn router(secret: String, static_folder: PathBuf) -> Router {
 
     Router::new()
         .route("/ws", get(ws_handler))
-        .route("/dbg", get(list))
-        .route("/prepare", get(prepare))
-        .route("/num", get(num_cpu))
         .nest("/admin", admin)
         .layer(Extension(users))
         .fallback_service(directory)
-}
-
-async fn list() -> impl IntoResponse {
-    let paths = fs::read_dir(".").unwrap();
-    let mut s = "".to_string();
-    for path in paths {
-        s = format!("{}\n{:?}", s, path.unwrap());
-    }
-    let paths = fs::read_dir("/tmp").unwrap();
-    for path in paths {
-        s = format!("{}\n{:?}", s, path.unwrap());
-    }
-    let paths = fs::read_dir("/usr/local/cargo").unwrap();
-    for path in paths {
-        s = format!("{}\n{:?}", s, path.unwrap());
-    }
-    for (key, value) in std::env::vars() {
-        s = format!("{}\n{}: {}", s, key, value);
-    }
-    s
-}
-
-async fn prepare() -> impl IntoResponse {
-    let file = std::path::Path::new("/prepare.sh");
-    fs::read_to_string(file).unwrap()
-}
-
-async fn num_cpu() -> impl IntoResponse {
-    num_cpus::get().to_string()
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, Extension(state): Extension<Users>) -> impl IntoResponse {
